@@ -25,13 +25,12 @@
 //  WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
-#import <Foundation/Foundation.h>
-
 @interface ILCannedURLProtocol : NSURLProtocol
 
 + (void)setCannedResponseData:(NSData*)data;
 + (void)setCannedHeaders:(NSDictionary*)headers;
 + (void)setCannedStatusCode:(NSInteger)statusCode;
 + (void)setCannedError:(NSError*)error;
++ (void)reset;
 
 @end

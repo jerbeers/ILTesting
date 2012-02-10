@@ -40,8 +40,9 @@ static NSError *gILCannedError = nil;
 @implementation ILCannedURLProtocol
 
 + (BOOL)canInitWithRequest:(NSURLRequest *)request {
-	// For now only supporting http GET
-	return [[[request URL] scheme] isEqualToString:@"http"] && ([[request HTTPMethod] isEqualToString:@"GET"] || [[request HTTPMethod] isEqualToString:@"POST"]);
+	// For now only supporting http GET and POST
+//	return [[[request URL] scheme] isEqualToString:@"http"] && ([[request HTTPMethod] isEqualToString:@"GET"] || [[request HTTPMethod] isEqualToString:@"POST"]);
+    return YES;
 }
 
 + (NSURLRequest *)canonicalRequestForRequest:(NSURLRequest *)request {
@@ -49,17 +50,11 @@ static NSError *gILCannedError = nil;
 }
 
 + (void)setCannedResponseData:(NSData*)data {
-	if(data != gILCannedResponseData) {
-		[gILCannedResponseData release];
-		gILCannedResponseData = [data retain];
-	}
+    gILCannedResponseData = data;
 }
 
 + (void)setCannedHeaders:(NSDictionary*)headers {
-	if(headers != gILCannedHeaders) {
-		[gILCannedHeaders release];
-		gILCannedHeaders = [headers retain];
-	}
+    gILCannedHeaders = headers;
 }
 
 + (void)setCannedStatusCode:(NSInteger)statusCode {
@@ -67,10 +62,14 @@ static NSError *gILCannedError = nil;
 }
 
 + (void)setCannedError:(NSError*)error {
-	if(error != gILCannedError) {
-		[gILCannedError release];
-		gILCannedError = [error retain];
-	}
+    gILCannedError = error;
+}
+
++ (void)reset {
+    gILCannedResponseData = nil;
+    gILCannedHeaders = nil;
+    gILCannedError = nil;
+    gILCannedStatusCode = 200;
 }
 
 - (NSCachedURLResponse *)cachedResponse {
@@ -81,7 +80,7 @@ static NSError *gILCannedError = nil;
     NSURLRequest *request = [self request];
 	id<NSURLProtocolClient> client = [self client];
 	
-	if(gILCannedResponseData) {
+	if (gILCannedResponseData) {
 		// Send the canned data
 		NSHTTPURLResponse *response = [[NSHTTPURLResponse alloc] initWithURL:[request URL]
 																  statusCode:gILCannedStatusCode
@@ -91,10 +90,7 @@ static NSError *gILCannedError = nil;
 		[client URLProtocol:self didReceiveResponse:response cacheStoragePolicy:NSURLCacheStorageNotAllowed];
 		[client URLProtocol:self didLoadData:gILCannedResponseData];
 		[client URLProtocolDidFinishLoading:self];
-		
-		[response release];
-	}
-	else if(gILCannedError) {
+	} else if (gILCannedError) {
 		// Send the canned error
 		[client URLProtocol:self didFailWithError:gILCannedError];
 	}
