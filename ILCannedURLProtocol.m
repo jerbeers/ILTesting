@@ -32,12 +32,20 @@
 - (id)initWithURL:(NSURL*)URL statusCode:(NSInteger)statusCode headerFields:(NSDictionary*)headerFields requestTime:(double)requestTime;
 @end
 
-static NSData *gILCannedResponseData = nil;
-static NSDictionary *gILCannedHeaders = nil;
-static NSInteger gILCannedStatusCode = 200;
-static NSError *gILCannedError = nil;
+@interface ILCannedURLProtocol()
++ (NSMutableDictionary*)responses;
+@end
+
+static NSMutableDictionary *gILCannedResponses;
 
 @implementation ILCannedURLProtocol
+
++ (NSMutableDictionary*)responses {
+    if (gILCannedResponses == nil) {
+        gILCannedResponses = [NSMutableDictionary dictionary];
+    }
+    return gILCannedResponses;
+}
 
 + (BOOL)canInitWithRequest:(NSURLRequest *)request {
 	// For now only supporting http GET and POST
@@ -50,26 +58,63 @@ static NSError *gILCannedError = nil;
 }
 
 + (void)setCannedResponseData:(NSData*)data {
-    gILCannedResponseData = data;
+    [self setCannedResponseData:data forPath:@""];
+}
+
++ (void)setCannedResponseData:(NSData *)data forPath:(NSString *)path {
+    NSMutableDictionary *responsesForPaths = [self responses];
+    NSMutableDictionary *response = [responsesForPaths objectForKey:path];
+    if (response == nil) {
+        response = [NSMutableDictionary dictionary];
+        [responsesForPaths setValue:response forKey:path];
+    }
+    [response setValue:data forKey:@"data"];
 }
 
 + (void)setCannedHeaders:(NSDictionary*)headers {
-    gILCannedHeaders = headers;
+    [self setCannedHeaders:headers forPath:@""];
+}
+
++ (void)setCannedHeaders:(NSDictionary *)headers forPath:(NSString *)path {
+    NSMutableDictionary *responsesForPaths = [self responses];
+    NSMutableDictionary *response = [responsesForPaths objectForKey:path];
+    if (response == nil) {
+        response = [NSMutableDictionary dictionary];
+        [responsesForPaths setValue:response forKey:path];
+    }
+    [response setValue:headers forKey:@"headers"];
 }
 
 + (void)setCannedStatusCode:(NSInteger)statusCode {
-	gILCannedStatusCode = statusCode;
+    [self setCannedStatusCode:statusCode forPath:@""];
+}
+
++ (void)setCannedStatusCode:(NSInteger)statusCode forPath:(NSString *)path {
+    NSMutableDictionary *responsesForPaths = [self responses];
+    NSMutableDictionary *response = [responsesForPaths objectForKey:path];
+    if (response == nil) {
+        response = [NSMutableDictionary dictionary];
+        [responsesForPaths setValue:response forKey:path];
+    }
+    [response setValue:[NSNumber numberWithInt:statusCode] forKey:@"statusCode"];
 }
 
 + (void)setCannedError:(NSError*)error {
-    gILCannedError = error;
+    [self setCannedError:error forPath:@""];
+}
+
++ (void)setCannedError:(NSError *)error forPath:(NSString *)path {
+    NSMutableDictionary *responsesForPaths = [self responses];
+    NSMutableDictionary *response = [responsesForPaths objectForKey:path];
+    if (response == nil) {
+        response = [NSMutableDictionary dictionary];
+        [responsesForPaths setValue:response forKey:path];
+    }
+    [response setValue:error forKey:@"error"];
 }
 
 + (void)reset {
-    gILCannedResponseData = nil;
-    gILCannedHeaders = nil;
-    gILCannedError = nil;
-    gILCannedStatusCode = 200;
+    [[self responses] removeAllObjects];
 }
 
 - (NSCachedURLResponse *)cachedResponse {
@@ -80,20 +125,33 @@ static NSError *gILCannedError = nil;
     NSURLRequest *request = [self request];
 	id<NSURLProtocolClient> client = [self client];
 	
-	if (gILCannedResponseData) {
+    NSString *path = [[request URL] path];
+    NSDictionary *dictionary = [[ILCannedURLProtocol responses] objectForKey:path];
+    // If there aren't entries for this path, see if there are default entries
+    if (dictionary == nil) {
+        dictionary = [[ILCannedURLProtocol responses] objectForKey:@""];
+    }
+    NSData *data = [dictionary objectForKey:@"data"];
+    NSError *error = [dictionary objectForKey:@"error"];
+	if (data) {
 		// Send the canned data
+        NSInteger statusCode = [[dictionary objectForKey:@"statusCode"] intValue];
+        NSDictionary *headers = [dictionary objectForKey:@"headers"];
 		NSHTTPURLResponse *response = [[NSHTTPURLResponse alloc] initWithURL:[request URL]
-																  statusCode:gILCannedStatusCode
-																headerFields:gILCannedHeaders 
+																  statusCode:statusCode
+																headerFields:headers 
 																 requestTime:0.0];
 		
 		[client URLProtocol:self didReceiveResponse:response cacheStoragePolicy:NSURLCacheStorageNotAllowed];
-		[client URLProtocol:self didLoadData:gILCannedResponseData];
+		[client URLProtocol:self didLoadData:data];
 		[client URLProtocolDidFinishLoading:self];
-	} else if (gILCannedError) {
+	} else if (error) {
 		// Send the canned error
-		[client URLProtocol:self didFailWithError:gILCannedError];
-	}
+		[client URLProtocol:self didFailWithError:error];
+	} else {
+        // TODO: What if we don't have data or an error?  Should we handle in a default way?
+        NSAssert1(false, @"ILCannedURLProtocol called with unhandled path: %@", path);
+    }
 }
 
 - (void)stopLoading {

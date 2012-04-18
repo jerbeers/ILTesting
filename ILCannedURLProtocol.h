@@ -28,9 +28,13 @@
 @interface ILCannedURLProtocol : NSURLProtocol
 
 + (void)setCannedResponseData:(NSData*)data;
++ (void)setCannedResponseData:(NSData *)data forPath:(NSString*)path;
 + (void)setCannedHeaders:(NSDictionary*)headers;
++ (void)setCannedHeaders:(NSDictionary*)headers forPath:(NSString*)path;
 + (void)setCannedStatusCode:(NSInteger)statusCode;
++ (void)setCannedStatusCode:(NSInteger)statusCode forPath:(NSString*)path;
 + (void)setCannedError:(NSError*)error;
++ (void)setCannedError:(NSError*)error forPath:(NSString*)path;
 + (void)reset;
 
 @end
