@@ -149,7 +149,7 @@ static NSMutableDictionary *gILCannedResponses;
 		// Send the canned error
 		[client URLProtocol:self didFailWithError:error];
 	} else {
-        // TODO: What if we don't have data or an error?  Should we handle in a default way?
+        // TODO2: What if we don't have data or an error?  Should we handle in a default way?
         NSAssert1(false, @"ILCannedURLProtocol called with unhandled path: %@", path);
     }
 }
