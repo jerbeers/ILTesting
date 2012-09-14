@@ -27,6 +27,10 @@
 
 #import "ILCannedURLProtocol.h"
 
+#ifndef DEBUG
+#error @"This should not be compiled in release mode"
+#endif
+
 // Undocumented initializer obtained by class-dump - don't use this in production code destined for the App Store
 @interface NSHTTPURLResponse(UndocumentedInitializer)
 - (id)initWithURL:(NSURL*)URL statusCode:(NSInteger)statusCode headerFields:(NSDictionary*)headerFields requestTime:(double)requestTime;
